@@ -6,8 +6,8 @@
 <title>Aviator Odds — Live</title>
 <meta name="theme-color" content="#0F766E" />
 <link rel="manifest" href="/manifest.json" />
-<link rel="apple-touch-icon" href="/icons/icon-192.png" />
-<link rel="icon" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<link rel="icon" href="/icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Aviator Odds" />
@@ -37,7 +37,6 @@
     font-size: 15px;
   }
 
-  /* ---------------- Login gate ---------------- */
   #gate {
     position: fixed;
     inset: 0;
@@ -51,22 +50,9 @@
 
   #gate.hidden { display: none; }
 
-  .gate-card {
-    width: 100%;
-    max-width: 320px;
-  }
-
-  .gate-card h1 {
-    font-size: 19px;
-    font-weight: 600;
-    margin: 0 0 6px;
-  }
-
-  .gate-card p {
-    color: var(--muted);
-    font-size: 13.5px;
-    margin: 0 0 20px;
-  }
+  .gate-card { width: 100%; max-width: 320px; }
+  .gate-card h1 { font-size: 19px; font-weight: 600; margin: 0 0 6px; }
+  .gate-card p { color: var(--muted); font-size: 13.5px; margin: 0 0 20px; }
 
   .gate-card input {
     width: 100%;
@@ -80,10 +66,7 @@
     margin-bottom: 12px;
   }
 
-  .gate-card input:focus {
-    outline: none;
-    border-color: var(--teal);
-  }
+  .gate-card input:focus { outline: none; border-color: var(--teal); }
 
   .gate-card button {
     width: 100%;
@@ -100,48 +83,20 @@
 
   .gate-card button:active { opacity: 0.85; }
 
-  .gate-error {
-    color: var(--danger);
-    font-size: 13px;
-    margin-top: 10px;
-    min-height: 16px;
-  }
+  .gate-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
-  /* ---------------- Dashboard ---------------- */
-  .wrap {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 40px 20px 80px;
-  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
 
-  header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
   h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-
+  .status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
   .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--low); }
   .status.connected .dot { background: var(--live-dot); }
 
   .sub { color: var(--muted); font-size: 13px; margin: 0 0 28px; }
 
-  .filters {
-    display: flex;
-    gap: 20px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 4px;
-  }
+  .filters { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 
   .filters button {
     background: none;
@@ -369,7 +324,6 @@
     };
   }
 
-  // Skip the gate if a key is already stored on this device
   if (API_KEY) {
     keyInput.value = API_KEY;
     tryUnlock();
