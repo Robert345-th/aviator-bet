@@ -164,16 +164,12 @@ function isHigh(m) {
   return m >= 3; // "3x and up"
 }
 
-function isLow(m) {
-  return m < 2; // stays under 2x — the opposite signal
-}
-
 const MIN_OCCURRENCES = 5;
 const MIN_CONFIDENCE = 0.68;
 
 function computeTopPatterns(values) {
   const seqLens = [2, 3, 4, 5];
-  const stats = {}; // sequence key -> { total, highHits, lowHits }
+  const stats = {}; // sequence key -> { total, hits, minNext }
 
   for (let i = 0; i < values.length - 1; i++) {
     for (const len of seqLens) {
@@ -183,32 +179,26 @@ function computeTopPatterns(values) {
       const seq = [];
       for (let j = start; j <= i; j++) seq.push(tierOf(values[j]));
       const key = seq.join('>');
+      const nextVal = values[i + 1];
 
-      if (!stats[key]) stats[key] = { total: 0, highHits: 0, lowHits: 0 };
+      if (!stats[key]) stats[key] = { total: 0, hits: 0, minNext: Infinity };
       stats[key].total++;
-      if (isHigh(values[i + 1])) stats[key].highHits++;
-      if (isLow(values[i + 1])) stats[key].lowHits++;
+      if (isHigh(nextVal)) stats[key].hits++;
+      stats[key].minNext = Math.min(stats[key].minNext, nextVal);
     }
   }
 
-  function rank(hitField) {
-    const results = [];
-    for (const key in stats) {
-      const { total } = stats[key];
-      const hits = stats[key][hitField];
-      if (total < MIN_OCCURRENCES) continue;
-      const confidence = hits / total;
-      if (confidence < MIN_CONFIDENCE) continue;
-      results.push({ sequence: key.split('>'), count: hits, total, confidence });
-    }
-    results.sort((a, b) => b.confidence - a.confidence || b.total - a.total);
-    return results.slice(0, 5);
+  const results = [];
+  for (const key in stats) {
+    const { total, hits, minNext } = stats[key];
+    if (total < MIN_OCCURRENCES) continue;
+    const confidence = hits / total;
+    if (confidence < MIN_CONFIDENCE) continue;
+    results.push({ sequence: key.split('>'), count: hits, total, confidence, safe: minNext });
   }
 
-  return {
-    high: rank('highHits'),
-    low: rank('lowHits'),
-  };
+  results.sort((a, b) => b.confidence - a.confidence || b.total - a.total);
+  return results.slice(0, 5);
 }
 
 app.get('/api/patterns', requireApiKey, async (req, res) => {
