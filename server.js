@@ -27,6 +27,18 @@ async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_odds_log_platform_time
       ON odds_log (platform, collected_at DESC);
+
+    CREATE TABLE IF NOT EXISTS balance_log (
+      id BIGSERIAL PRIMARY KEY,
+      platform TEXT NOT NULL,
+      balance NUMERIC(12, 2) NOT NULL,
+      currency TEXT,
+      collected_at TIMESTAMPTZ NOT NULL,
+      received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      source_url TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_balance_log_platform_time
+      ON balance_log (platform, collected_at DESC);
   `);
 }
 
@@ -147,6 +159,102 @@ app.get('/api/odds/count', requireApiKey, async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// Balance tracking — separate live feed + table from the odds log.
+// ---------------------------------------------------------------------
+const balanceSseClients = new Set();
+
+function broadcastBalance(entry) {
+  const payload = `data: ${JSON.stringify(entry)}\n\n`;
+  for (const res of balanceSseClients) {
+    res.write(payload);
+  }
+}
+
+app.get('/api/balance/stream', requireApiKey, (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  balanceSseClients.add(res);
+  req.on('close', () => balanceSseClients.delete(res));
+});
+
+// Accepts either a single balance reading or a batch: { readings: [...] }
+app.post('/api/balance', requireApiKey, async (req, res) => {
+  const readings = Array.isArray(req.body.readings)
+    ? req.body.readings
+    : [req.body];
+
+  const clean = readings.filter(
+    (r) => r && r.platform && typeof r.balance === 'number'
+  );
+
+  if (clean.length === 0) {
+    return res.status(400).json({ error: 'no valid readings in payload' });
+  }
+
+  try {
+    let inserted = 0;
+    for (const r of clean) {
+      const result = await pool.query(
+        `INSERT INTO balance_log (platform, balance, currency, collected_at, source_url)
+         SELECT $1, $2, $3, $4, $5
+         WHERE NOT EXISTS (
+           SELECT 1 FROM balance_log
+           WHERE platform = $1
+             AND balance = $2
+             AND collected_at BETWEEN $4::timestamptz - INTERVAL '3 seconds'
+                                  AND $4::timestamptz + INTERVAL '3 seconds'
+         )`,
+        [
+          r.platform,
+          r.balance,
+          r.currency || null,
+          r.collected_at || new Date().toISOString(),
+          r.url || null,
+        ]
+      );
+      if (result.rowCount > 0) inserted++;
+    }
+
+    if (inserted > 0) clean.forEach(broadcastBalance);
+
+    res.json({ inserted });
+  } catch (err) {
+    console.error('Balance insert failed:', err);
+    res.status(500).json({ error: 'insert failed' });
+  }
+});
+
+app.get('/api/balance/recent', requireApiKey, async (req, res) => {
+  const platform = req.query.platform || null;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 5000);
+
+  try {
+    const { rows } = platform
+      ? await pool.query(
+          `SELECT platform, balance, currency, collected_at
+           FROM balance_log WHERE platform = $1
+           ORDER BY collected_at DESC LIMIT $2`,
+          [platform, limit]
+        )
+      : await pool.query(
+          `SELECT platform, balance, currency, collected_at
+           FROM balance_log ORDER BY collected_at DESC LIMIT $1`,
+          [limit]
+        );
+    res.json(rows);
+  } catch (err) {
+    console.error('Balance query failed:', err);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // ---------------------------------------------------------------------
@@ -232,6 +340,73 @@ app.get('/api/patterns', requireApiKey, async (req, res) => {
     res.json(computeTopPatterns(values));
   } catch (err) {
     console.error('Pattern query failed:', err);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
+// ---------------------------------------------------------------------
+// Next-action decision — this is what the balance-watcher script polls.
+// Looks at the most recent rounds, checks whether the tail of that
+// sequence matches one of the top-5 high-confidence patterns computed
+// above, and tells the client whether to bet (with a target cashout
+// multiplier) or wait. All decision logic lives here on the server —
+// the client only executes what this endpoint says.
+// ---------------------------------------------------------------------
+
+const MIN_HISTORY_FOR_DECISION = 20;
+
+app.get('/api/next-action', requireApiKey, async (req, res) => {
+  const platform = req.query.platform;
+  if (!platform) return res.status(400).json({ error: 'platform required' });
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT multiplier FROM odds_log WHERE platform = $1
+       ORDER BY collected_at ASC LIMIT 5000`,
+      [platform]
+    );
+    const values = rows.map((r) => Number(r.multiplier));
+
+    if (values.length < MIN_HISTORY_FOR_DECISION) {
+      return res.json({ action: 'wait', reason: 'not enough history yet' });
+    }
+
+    const patterns = computeTopPatterns(values);
+    const recentTiers = values.slice(-5).map(tierOf);
+
+    // Try the longest matching tail first (more specific = generally
+    // more reliable), then shorter ones. target3 (3x+) checked before
+    // target2 (2.2x+) since it's the higher-value outcome when both hit.
+    for (let len = Math.min(5, recentTiers.length); len >= 2; len--) {
+      const suffix = recentTiers.slice(-len);
+      const key = suffix.join('>');
+
+      const hit3 = patterns.target3.find((p) => p.sequence.join('>') === key);
+      if (hit3) {
+        return res.json({
+          action: 'bet',
+          target: hit3.safe,
+          confidence: hit3.confidence,
+          matched: 'target3',
+          sequence: hit3.sequence,
+        });
+      }
+
+      const hit2 = patterns.target2.find((p) => p.sequence.join('>') === key);
+      if (hit2) {
+        return res.json({
+          action: 'bet',
+          target: hit2.safe,
+          confidence: hit2.confidence,
+          matched: 'target2',
+          sequence: hit2.sequence,
+        });
+      }
+    }
+
+    res.json({ action: 'wait' });
+  } catch (err) {
+    console.error('Next-action query failed:', err);
     res.status(500).json({ error: 'query failed' });
   }
 });
