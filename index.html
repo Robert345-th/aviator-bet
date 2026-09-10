@@ -365,34 +365,40 @@
 
   async function loadPatterns(platform, targetId) {
     const box = document.getElementById(targetId);
-    box.innerHTML = '<div class="empty">Finding patterns…</div>';
+    const isFirstLoad = box.childElementCount === 0;
+    if (isFirstLoad) box.innerHTML = '<div class="empty">Finding patterns…</div>';
+
     try {
       const res = await fetch(`/api/patterns?platform=${platform}&key=${encodeURIComponent(API_KEY)}`);
       if (!res.ok) throw new Error('failed');
       const patterns = await res.json();
+
+      const fresh = document.createElement('div');
       if (patterns.length === 0) {
-        box.innerHTML = '<div class="empty">Not enough data yet for patterns.</div>';
-        return;
+        fresh.innerHTML = '<div class="empty">Not enough data yet for patterns.</div>';
+      } else {
+        patterns.forEach((p) => {
+          const pct = Math.round(p.confidence * 100);
+          const dots = p.sequence.map((t) => `<span class="tier-dot ${t}"></span>`).join('');
+          const el = document.createElement('div');
+          el.className = 'box';
+          el.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px;';
+          el.innerHTML = `
+            <div style="display:flex;align-items:center;gap:4px;font-size:13.5px;">
+              ${dots}
+              <span style="color:var(--muted);margin:0 4px;">&rarr;</span>
+              <span style="font-weight:600;">3x+</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);">${pct}% of the time (${p.count} of ${p.total})</div>
+          `;
+          fresh.appendChild(el);
+        });
       }
-      box.innerHTML = '';
-      patterns.forEach((p) => {
-        const pct = Math.round(p.confidence * 100);
-        const dots = p.sequence.map((t) => `<span class="tier-dot ${t}"></span>`).join('');
-        const el = document.createElement('div');
-        el.className = 'box';
-        el.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px;';
-        el.innerHTML = `
-          <div style="display:flex;align-items:center;gap:4px;font-size:13.5px;">
-            ${dots}
-            <span style="color:var(--muted);margin:0 4px;">&rarr;</span>
-            <span style="font-weight:600;">3x+</span>
-          </div>
-          <div style="font-size:12px;color:var(--muted);">${pct}% of the time (${p.count} of ${p.total})</div>
-        `;
-        box.appendChild(el);
-      });
+
+      box.replaceChildren(...fresh.childNodes);
     } catch (e) {
-      box.innerHTML = '<div class="empty">Could not load patterns.</div>';
+      if (isFirstLoad) box.innerHTML = '<div class="empty">Could not load patterns.</div>';
+      // background refresh failures stay quiet — last good data stays on screen
     }
   }
 
