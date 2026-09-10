@@ -280,6 +280,7 @@
             <span class="latest-label" id="bwanabet-time">Waiting for a round…</span>
             <span class="latest-value" id="bwanabet-value">—</span>
           </div>
+          <div class="sub" style="margin:4px 0 0;font-size:12px;" id="bwanabet-count">— odds recorded</div>
           <button class="view-btn" data-platform="bwanabet">View</button>
         </div>
 
@@ -291,6 +292,7 @@
             <span class="latest-label" id="bongobet-time">Waiting for a round…</span>
             <span class="latest-value" id="bongobet-value">—</span>
           </div>
+          <div class="sub" style="margin:4px 0 0;font-size:12px;" id="bongobet-count">— odds recorded</div>
           <button class="view-btn" data-platform="bongobet">View</button>
         </div>
 
@@ -313,6 +315,7 @@
         <button class="back-btn" id="backBtn" aria-label="Back">←</button>
         <h1 id="detailTitle">Odds</h1>
       </header>
+      <p class="sub" id="detailCount" style="margin:4px 0 16px;"></p>
 
       <div class="boxes" id="fullBoxes" style="margin-top:16px;">
         <div class="empty">No rounds yet.</div>
@@ -459,8 +462,10 @@
     gateEl.classList.remove('show');
     dashEl.style.display = 'block';
     loadRecent();
+    loadCounts();
     connectStream();
     setInterval(loadRecent, 1000);
+    setInterval(loadCounts, 1000);
   }
 
   function classify(multiplier) {
@@ -507,6 +512,26 @@
     }
     fullBoxes.innerHTML = '';
     visible.slice(0, 200).forEach((r) => fullBoxes.appendChild(makeBox(r)));
+  }
+
+  async function loadCounts() {
+    try {
+      const [bwRes, bgRes] = await Promise.all([
+        fetch(`/api/odds/count?platform=bwanabet&key=${encodeURIComponent(API_KEY)}`),
+        fetch(`/api/odds/count?platform=bongobet&key=${encodeURIComponent(API_KEY)}`),
+      ]);
+      const bw = await bwRes.json();
+      const bg = await bgRes.json();
+      document.getElementById('bwanabet-count').textContent = bw.count.toLocaleString() + ' odds recorded';
+      document.getElementById('bongobet-count').textContent = bg.count.toLocaleString() + ' odds recorded';
+
+      if (detailPlatform) {
+        const count = detailPlatform === 'bwanabet' ? bw.count : bg.count;
+        document.getElementById('detailCount').textContent = count.toLocaleString() + ' odds recorded';
+      }
+    } catch (e) {
+      // counts are non-critical — fail silently, main data still works
+    }
   }
 
   async function loadRecent() {
