@@ -166,10 +166,18 @@ function isHigh(m) {
 
 const MIN_OCCURRENCES = 5;
 const MIN_CONFIDENCE = 0.68;
+const SAFE_CONFIDENCE = 0.90; // the floor this sequence reaches 90%+ of the time
+
+function percentileFloor(sortedAsc, p) {
+  const n = sortedAsc.length;
+  if (n === 0) return null;
+  const idx = Math.max(0, Math.ceil(p * n) - 1);
+  return sortedAsc[idx];
+}
 
 function computeTopPatterns(values) {
   const seqLens = [2, 3, 4, 5];
-  const stats = {}; // sequence key -> { total, hits, minNext }
+  const stats = {}; // sequence key -> array of next-round outcomes
 
   for (let i = 0; i < values.length - 1; i++) {
     for (const len of seqLens) {
@@ -179,22 +187,26 @@ function computeTopPatterns(values) {
       const seq = [];
       for (let j = start; j <= i; j++) seq.push(tierOf(values[j]));
       const key = seq.join('>');
-      const nextVal = values[i + 1];
-
-      if (!stats[key]) stats[key] = { total: 0, hits: 0, minNext: Infinity };
-      stats[key].total++;
-      if (isHigh(nextVal)) stats[key].hits++;
-      stats[key].minNext = Math.min(stats[key].minNext, nextVal);
+      if (!stats[key]) stats[key] = [];
+      stats[key].push(values[i + 1]);
     }
   }
 
   const results = [];
   for (const key in stats) {
-    const { total, hits, minNext } = stats[key];
+    const outcomes = stats[key];
+    const total = outcomes.length;
     if (total < MIN_OCCURRENCES) continue;
+
+    const hits = outcomes.filter(isHigh).length;
     const confidence = hits / total;
     if (confidence < MIN_CONFIDENCE) continue;
-    results.push({ sequence: key.split('>'), count: hits, total, confidence, safe: minNext });
+
+    const sorted = [...outcomes].sort((a, b) => a - b);
+    // 10th percentile = the floor that's met or beaten 90% of the time
+    const safe = percentileFloor(sorted, 1 - SAFE_CONFIDENCE);
+
+    results.push({ sequence: key.split('>'), count: hits, total, confidence, safe });
   }
 
   results.sort((a, b) => b.confidence - a.confidence || b.total - a.total);
