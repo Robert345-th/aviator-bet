@@ -319,10 +319,13 @@ function computeTopPatternsForTarget(values, target, minConfidence) {
   return results.slice(0, 5);
 }
 
+const TARGET2_VALUE = 2.2;
+const TARGET3_VALUE = 3;
+
 function computeTopPatterns(values) {
   return {
-    target2: computeTopPatternsForTarget(values, 2.2, 0.75),
-    target3: computeTopPatternsForTarget(values, 3, 0.68),
+    target2: computeTopPatternsForTarget(values, TARGET2_VALUE, 0.75),
+    target3: computeTopPatternsForTarget(values, TARGET3_VALUE, 0.68),
   };
 }
 
@@ -385,7 +388,7 @@ app.get('/api/next-action', requireApiKey, async (req, res) => {
       if (hit3) {
         return res.json({
           action: 'bet',
-          target: hit3.safe,
+          target: TARGET3_VALUE, // cash out at the bucket target itself, not the conservative "safe" floor
           confidence: hit3.confidence,
           matched: 'target3',
           sequence: hit3.sequence,
@@ -396,7 +399,7 @@ app.get('/api/next-action', requireApiKey, async (req, res) => {
       if (hit2) {
         return res.json({
           action: 'bet',
-          target: hit2.safe,
+          target: TARGET2_VALUE,
           confidence: hit2.confidence,
           matched: 'target2',
           sequence: hit2.sequence,
