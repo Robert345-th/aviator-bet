@@ -41,14 +41,24 @@
     position: fixed;
     inset: 0;
     background: var(--bg);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 24px;
     z-index: 20;
   }
 
-  #gate.hidden { display: none; }
+  #gate.show { display: flex; }
+
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: none;
+    z-index: 20;
+  }
+
+  #loading.show { display: block; }
 
   .gate-card { width: 100%; max-width: 320px; }
   .gate-card h1 { font-size: 19px; font-weight: 600; margin: 0 0 6px; }
@@ -226,6 +236,8 @@
 </head>
 <body>
 
+  <div id="loading"></div>
+
   <div id="gate">
     <div class="gate-card">
       <h1>Aviator Odds</h1>
@@ -291,6 +303,7 @@
 <script>
   const STORAGE_KEY = 'aviator_odds_key';
   const gateEl = document.getElementById('gate');
+  const loadingEl = document.getElementById('loading');
   const dashEl = document.getElementById('dashboard');
   const keyInput = document.getElementById('keyInput');
   const unlockBtn = document.getElementById('unlockBtn');
@@ -334,7 +347,7 @@
   unlockBtn.addEventListener('click', tryUnlock);
   keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
 
-  async function tryUnlock() {
+  async function tryUnlock(isAutoCheck) {
     const candidate = keyInput.value.trim();
     if (!candidate) return;
     gateError.textContent = '';
@@ -343,6 +356,8 @@
     try {
       const res = await fetch(`/api/odds/recent?limit=1&key=${encodeURIComponent(candidate)}`);
       if (res.status === 401) {
+        loadingEl.classList.remove('show');
+        gateEl.classList.add('show');
         gateError.textContent = 'That key was rejected. Check it and try again.';
         unlockBtn.textContent = 'Unlock';
         return;
@@ -353,13 +368,16 @@
       localStorage.setItem(STORAGE_KEY, API_KEY);
       enterDashboard();
     } catch (e) {
+      loadingEl.classList.remove('show');
+      gateEl.classList.add('show');
       gateError.textContent = 'Could not reach the server. Try again.';
       unlockBtn.textContent = 'Unlock';
     }
   }
 
   function enterDashboard() {
-    gateEl.classList.add('hidden');
+    loadingEl.classList.remove('show');
+    gateEl.classList.remove('show');
     dashEl.style.display = 'block';
     loadRecent();
     connectStream();
@@ -448,7 +466,10 @@
 
   if (API_KEY) {
     keyInput.value = API_KEY;
-    tryUnlock();
+    loadingEl.classList.add('show');
+    tryUnlock(true);
+  } else {
+    gateEl.classList.add('show');
   }
 
   if ('serviceWorker' in navigator) {
