@@ -165,7 +165,7 @@ function isHit(m) {
 }
 
 const MIN_OCCURRENCES = 5;
-const MIN_CONFIDENCE = 0.75;
+const MIN_CONFIDENCE = 0.68;
 
 function computeTopPatterns(values) {
   const seqLens = [2, 3, 4, 5];
