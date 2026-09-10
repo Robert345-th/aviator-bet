@@ -82,29 +82,26 @@ app.post('/api/odds', requireApiKey, async (req, res) => {
   }
 
   try {
-    const values = [];
-    const placeholders = clean
-      .map((r, i) => {
-        const base = i * 4;
-        values.push(
-          r.platform,
-          r.multiplier,
-          r.collected_at || new Date().toISOString(),
-          r.url || null
-        );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
-      })
-      .join(', ');
+    let inserted = 0;
+    for (const r of clean) {
+      const result = await pool.query(
+        `INSERT INTO odds_log (platform, multiplier, collected_at, source_url)
+         SELECT $1, $2, $3, $4
+         WHERE NOT EXISTS (
+           SELECT 1 FROM odds_log
+           WHERE platform = $1
+             AND multiplier = $2
+             AND collected_at BETWEEN $3::timestamptz - INTERVAL '3 seconds'
+                                  AND $3::timestamptz + INTERVAL '3 seconds'
+         )`,
+        [r.platform, r.multiplier, r.collected_at || new Date().toISOString(), r.url || null]
+      );
+      if (result.rowCount > 0) inserted++;
+    }
 
-    await pool.query(
-      `INSERT INTO odds_log (platform, multiplier, collected_at, source_url)
-       VALUES ${placeholders}`,
-      values
-    );
+    if (inserted > 0) clean.forEach(broadcast);
 
-    clean.forEach(broadcast);
-
-    res.json({ inserted: clean.length });
+    res.json({ inserted });
   } catch (err) {
     console.error('Insert failed:', err);
     res.status(500).json({ error: 'insert failed' });
@@ -115,7 +112,7 @@ app.post('/api/odds', requireApiKey, async (req, res) => {
 // e.g. GET /api/odds/recent?platform=bwanabet&limit=50
 app.get('/api/odds/recent', requireApiKey, async (req, res) => {
   const platform = req.query.platform || null;
-  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 500);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 5000);
 
   try {
     const { rows } = platform
