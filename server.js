@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 const API_KEY = process.env.API_KEY || 'CHANGE-ME'; // must match Tampermonkey script
 
@@ -38,10 +38,6 @@ function requireApiKey(req, res, next) {
   next();
 }
 
-// ---------------------------------------------------------------------
-// Live feed: dashboard clients connect here via Server-Sent Events and
-// get pushed each round the moment it's inserted — no polling delay.
-// ---------------------------------------------------------------------
 const sseClients = new Set();
 
 function broadcast(round) {
@@ -64,10 +60,8 @@ app.get('/api/stream', requireApiKey, (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
-// Health check — Railway pings this
 app.get('/health', (req, res) => res.send('Aviator odds collector is running'));
 
-// Accepts either a single round or a batch: { rounds: [...] }
 app.post('/api/odds', requireApiKey, async (req, res) => {
   const rounds = Array.isArray(req.body.rounds)
     ? req.body.rounds
@@ -111,8 +105,6 @@ app.post('/api/odds', requireApiKey, async (req, res) => {
   }
 });
 
-// Lookback for the dashboard's initial load and for sanity-checking data
-// e.g. GET /api/odds/recent?platform=bwanabet&limit=50
 app.get('/api/odds/recent', requireApiKey, async (req, res) => {
   const platform = req.query.platform || null;
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 500);
