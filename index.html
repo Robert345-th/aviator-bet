@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Aviator Odds — Live</title>
+<meta name="theme-color" content="#0F766E" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<link rel="icon" href="/icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Aviator Odds" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F7F4;
+    --panel: #FFFFFF;
+    --ink: #1A1D1F;
+    --muted: #6B7280;
+    --line: #E7E5DF;
+    --teal: #0F766E;
+    --amber: #B45309;
+    --low: #9CA3AF;
+    --live-dot: #16A34A;
+    --danger: #B91C1C;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    font-size: 15px;
+  }
+
+  /* ---------------- Login gate ---------------- */
+  #gate {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 20;
+  }
+
+  #gate.hidden { display: none; }
+
+  .gate-card {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .gate-card h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+
+  .gate-card p {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 0 0 20px;
+  }
+
+  .gate-card input {
+    width: 100%;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 15px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  .gate-card input:focus {
+    outline: none;
+    border-color: var(--teal);
+  }
+
+  .gate-card button {
+    width: 100%;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .gate-card button:active { opacity: 0.85; }
+
+  .gate-error {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* ---------------- Dashboard ---------------- */
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--low); }
+  .status.connected .dot { background: var(--live-dot); }
+
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 28px; }
+
+  .filters {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+  }
+
+  .filters button {
+    background: none;
+    border: none;
+    padding: 10px 0;
+    font: inherit;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .filters button.active { color: var(--ink); border-bottom-color: var(--teal); font-weight: 500; }
+
+  .feed { display: flex; flex-direction: column; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 90px 1fr 90px;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row .time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row .platform { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .row .platform .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .swatch.bwanabet { background: var(--teal); }
+  .swatch.bongobet { background: #7C5CBF; }
+
+  .row .multiplier {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .row .multiplier.hot { color: var(--amber); }
+  .row .multiplier.low { color: var(--low); }
+  .row.enter { animation: flash 900ms ease-out; }
+
+  @keyframes flash { from { background: #FDF4E7; } to { background: transparent; } }
+
+  .empty { color: var(--muted); font-size: 14px; padding: 40px 0; text-align: center; }
+
+  .signout {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 24px;
+  }
+
+  @media (prefers-reduced-motion: reduce) { .row.enter { animation: none; } }
+</style>
+</head>
+<body>
+
+  <div id="gate">
+    <div class="gate-card">
+      <h1>Aviator Odds</h1>
+      <p>Enter your collector key to view the live feed.</p>
+      <input type="password" id="keyInput" placeholder="Collector key" autocomplete="off" />
+      <button id="unlockBtn">Unlock</button>
+      <div class="gate-error" id="gateError"></div>
+    </div>
+  </div>
+
+  <div class="wrap" id="dashboard" style="display:none;">
+    <header>
+      <h1>Aviator Odds</h1>
+      <div class="status" id="status">
+        <span class="dot"></span>
+        <span id="statusText">connecting</span>
+      </div>
+    </header>
+    <p class="sub">Live rounds as they land from Bwanabet and Bongobet.</p>
+
+    <div class="filters">
+      <button class="active" data-platform="all">All</button>
+      <button data-platform="bwanabet">Bwanabet</button>
+      <button data-platform="bongobet">Bongobet</button>
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="empty">Waiting for the first round…</div>
+    </div>
+
+    <button class="signout" id="signoutBtn">Forget key on this device</button>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'aviator_odds_key';
+  const gateEl = document.getElementById('gate');
+  const dashEl = document.getElementById('dashboard');
+  const keyInput = document.getElementById('keyInput');
+  const unlockBtn = document.getElementById('unlockBtn');
+  const gateError = document.getElementById('gateError');
+  const feedEl = document.getElementById('feed');
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const signoutBtn = document.getElementById('signoutBtn');
+
+  let API_KEY = localStorage.getItem(STORAGE_KEY) || '';
+  let activeFilter = 'all';
+  let rounds = [];
+  let es = null;
+
+  document.querySelectorAll('.filters button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filters button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.platform;
+      render();
+    });
+  });
+
+  signoutBtn.addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    if (es) es.close();
+    location.reload();
+  });
+
+  unlockBtn.addEventListener('click', tryUnlock);
+  keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+
+  async function tryUnlock() {
+    const candidate = keyInput.value.trim();
+    if (!candidate) return;
+    gateError.textContent = '';
+    unlockBtn.textContent = 'Checking…';
+
+    try {
+      const res = await fetch(`/api/odds/recent?limit=1&key=${encodeURIComponent(candidate)}`);
+      if (res.status === 401) {
+        gateError.textContent = 'That key was rejected. Check it and try again.';
+        unlockBtn.textContent = 'Unlock';
+        return;
+      }
+      if (!res.ok) throw new Error('unexpected response');
+
+      API_KEY = candidate;
+      localStorage.setItem(STORAGE_KEY, API_KEY);
+      enterDashboard();
+    } catch (e) {
+      gateError.textContent = 'Could not reach the server. Try again.';
+      unlockBtn.textContent = 'Unlock';
+    }
+  }
+
+  function enterDashboard() {
+    gateEl.classList.add('hidden');
+    dashEl.style.display = 'block';
+    loadRecent();
+    connectStream();
+  }
+
+  function classify(multiplier) {
+    if (multiplier >= 10) return 'hot';
+    if (multiplier < 1.5) return 'low';
+    return '';
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function render(newestIsFresh) {
+    const visible = activeFilter === 'all' ? rounds : rounds.filter((r) => r.platform === activeFilter);
+
+    if (visible.length === 0) {
+      feedEl.innerHTML = '<div class="empty">No rounds yet for this platform.</div>';
+      return;
+    }
+
+    feedEl.innerHTML = '';
+    visible.slice(0, 200).forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'row' + (newestIsFresh && i === 0 ? ' enter' : '');
+      row.innerHTML = `
+        <span class="time">${formatTime(r.collected_at)}</span>
+        <span class="platform"><span class="swatch ${r.platform}"></span>${r.platform}</span>
+        <span class="multiplier ${classify(r.multiplier)}">${Number(r.multiplier).toFixed(2)}x</span>
+      `;
+      feedEl.appendChild(row);
+    });
+  }
+
+  async function loadRecent() {
+    try {
+      const res = await fetch(`/api/odds/recent?limit=100&key=${encodeURIComponent(API_KEY)}`);
+      if (!res.ok) throw new Error('load failed');
+      rounds = await res.json();
+      render();
+    } catch (e) {
+      feedEl.innerHTML = '<div class="empty">Could not load history.</div>';
+    }
+  }
+
+  function connectStream() {
+    es = new EventSource(`/api/stream?key=${encodeURIComponent(API_KEY)}`);
+
+    es.onopen = () => {
+      statusEl.classList.add('connected');
+      statusText.textContent = 'live';
+    };
+
+    es.onerror = () => {
+      statusEl.classList.remove('connected');
+      statusText.textContent = 'reconnecting';
+    };
+
+    es.onmessage = (event) => {
+      const round = JSON.parse(event.data);
+      rounds.unshift(round);
+      rounds = rounds.slice(0, 300);
+      render(true);
+    };
+  }
+
+  // Skip the gate if a key is already stored on this device
+  if (API_KEY) {
+    keyInput.value = API_KEY;
+    tryUnlock();
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
