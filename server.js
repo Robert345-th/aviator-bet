@@ -203,8 +203,11 @@ function computeTopPatterns(values) {
     if (confidence < MIN_CONFIDENCE) continue;
 
     const sorted = [...outcomes].sort((a, b) => a - b);
-    // 10th percentile = the floor that's met or beaten 90% of the time
-    const safe = percentileFloor(sorted, 1 - SAFE_CONFIDENCE);
+    // 10th percentile = the floor that's met or beaten 90% of the time.
+    // With small samples this can collapse toward the single worst value —
+    // floor it at 1.50 rather than showing a misleadingly low number.
+    let safe = percentileFloor(sorted, 1 - SAFE_CONFIDENCE);
+    if (safe < 1.5) safe = 1.5;
 
     results.push({ sequence: key.split('>'), count: hits, total, confidence, safe });
   }
