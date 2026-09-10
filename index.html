@@ -23,6 +23,9 @@
     --teal: #0F766E;
     --amber: #B45309;
     --low: #9CA3AF;
+    --odd-blue: #1D4ED8;
+    --odd-purple: #7C3AED;
+    --odd-pink: #DB2777;
     --live-dot: #16A34A;
     --danger: #B91C1C;
   }
@@ -168,8 +171,9 @@
     color: var(--ink);
   }
 
-  .platform-box .latest-value.hot { color: var(--amber); }
-  .platform-box .latest-value.low { color: var(--low); }
+  .platform-box .latest-value.odd-blue { color: var(--odd-blue); }
+  .platform-box .latest-value.odd-purple { color: var(--odd-purple); }
+  .platform-box .latest-value.odd-pink { color: var(--odd-pink); }
 
   .platform-box .view-btn {
     width: 100%;
@@ -210,8 +214,9 @@
     color: var(--ink);
   }
 
-  .box .multiplier.hot { color: var(--amber); }
-  .box .multiplier.low { color: var(--low); }
+  .box .multiplier.odd-blue { color: var(--odd-blue); }
+  .box .multiplier.odd-purple { color: var(--odd-purple); }
+  .box .multiplier.odd-pink { color: var(--odd-pink); }
   .box.enter { animation: flash 900ms ease-out; }
 
   @keyframes flash { from { background: #FDF4E7; } to { background: var(--panel); } }
@@ -384,9 +389,9 @@
   }
 
   function classify(multiplier) {
-    if (multiplier >= 10) return 'hot';
-    if (multiplier < 1.5) return 'low';
-    return '';
+    if (multiplier >= 10) return 'odd-pink';
+    if (multiplier >= 2) return 'odd-purple';
+    return 'odd-blue';
   }
 
   function formatTime(iso) {
