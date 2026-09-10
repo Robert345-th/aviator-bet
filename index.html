@@ -156,6 +156,11 @@
   .swatch.bwanabet { background: var(--teal); }
   .swatch.bongobet { background: #7C5CBF; }
 
+  .tier-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+  .tier-dot.blue { background: var(--odd-blue); }
+  .tier-dot.purple { background: var(--odd-purple); }
+  .tier-dot.pink { background: var(--odd-pink); }
+
   .platform-box .latest {
     display: flex;
     align-items: baseline;
@@ -298,6 +303,9 @@
         <h1 id="detailTitle">Odds</h1>
       </header>
 
+      <p class="sub" style="margin:16px 0 6px;">Top 5 patterns</p>
+      <div class="boxes" id="patternBoxes"></div>
+
       <div class="boxes" id="fullBoxes" style="margin-top:16px;">
         <div class="empty">No rounds yet.</div>
       </div>
@@ -328,6 +336,38 @@
   let es = null;
   let detailPlatform = null;
 
+  async function loadPatterns(platform) {
+    const box = document.getElementById('patternBoxes');
+    box.innerHTML = '<div class="empty">Finding patterns…</div>';
+    try {
+      const res = await fetch(`/api/patterns?platform=${platform}&key=${encodeURIComponent(API_KEY)}`);
+      if (!res.ok) throw new Error('failed');
+      const patterns = await res.json();
+      if (patterns.length === 0) {
+        box.innerHTML = '<div class="empty">Not enough data yet for patterns.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      patterns.forEach((p) => {
+        const pct = Math.round(p.confidence * 100);
+        const el = document.createElement('div');
+        el.className = 'box';
+        el.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px;';
+        el.innerHTML = `
+          <div style="display:flex;align-items:center;gap:6px;font-size:13.5px;">
+            <span class="tier-dot ${p.tier}"></span>${p.streak}× ${p.tier} in a row
+            <span style="color:var(--muted);">&rarr;</span>
+            <span class="tier-dot ${p.next}"></span>${p.next}
+          </div>
+          <div style="font-size:12px;color:var(--muted);">${pct}% of the time (${p.count} of ${p.total})</div>
+        `;
+        box.appendChild(el);
+      });
+    } catch (e) {
+      box.innerHTML = '<div class="empty">Could not load patterns.</div>';
+    }
+  }
+
   document.querySelectorAll('.view-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       detailPlatform = btn.dataset.platform;
@@ -335,6 +375,7 @@
       screenList.style.display = 'none';
       screenDetail.style.display = 'block';
       renderFull();
+      loadPatterns(detailPlatform);
     });
   });
 
