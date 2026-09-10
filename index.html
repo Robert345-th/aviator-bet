@@ -114,22 +114,70 @@
 
   .sub { color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
 
-  .filters { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  /* ---------------- Platform boxes on home ---------------- */
+  .platform-boxes { display: flex; flex-direction: column; gap: 10px; }
 
-  .filters button {
-    background: none;
-    border: none;
-    padding: 10px 0;
-    font: inherit;
-    font-size: 14px;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
+  .platform-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
   }
 
-  .filters button.active { color: var(--ink); border-bottom-color: var(--teal); font-weight: 500; }
+  .platform-box .row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
 
+  .platform-box .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .platform-box .swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .swatch.bwanabet { background: var(--teal); }
+  .swatch.bongobet { background: #7C5CBF; }
+
+  .platform-box .latest {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .platform-box .latest-label { font-size: 12px; color: var(--muted); }
+
+  .platform-box .latest-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--ink);
+  }
+
+  .platform-box .latest-value.hot { color: var(--amber); }
+  .platform-box .latest-value.low { color: var(--low); }
+
+  .platform-box .view-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .platform-box .view-btn:active { background: var(--bg); }
+
+  /* ---------------- Boxed round list (detail page) ---------------- */
   .boxes { display: flex; flex-direction: column; gap: 8px; }
 
   .box {
@@ -142,12 +190,7 @@
     align-items: center;
   }
 
-  .box .meta { display: flex; flex-direction: column; gap: 2px; }
   .box .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .box .platform { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
-  .box .platform .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .swatch.bwanabet { background: var(--teal); }
-  .swatch.bongobet { background: #7C5CBF; }
 
   .box .multiplier {
     font-family: 'IBM Plex Mono', monospace;
@@ -162,22 +205,6 @@
   .box.enter { animation: flash 900ms ease-out; }
 
   @keyframes flash { from { background: #FDF4E7; } to { background: var(--panel); } }
-
-  .view-all {
-    width: 100%;
-    margin-top: 14px;
-    padding: 12px 14px;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    background: none;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    color: var(--ink);
-    cursor: pointer;
-  }
-
-  .view-all:active { background: var(--panel); }
 
   .empty { color: var(--muted); font-size: 14px; padding: 40px 0; text-align: center; }
 
@@ -219,30 +246,43 @@
           <span id="statusText">connecting</span>
         </div>
       </header>
-      <p class="sub">Latest rounds from Bwanabet and Bongobet.</p>
+      <p class="sub">Pick a platform to see its odds.</p>
 
-      <div class="boxes" id="recentBoxes">
-        <div class="empty">Waiting for the first round…</div>
+      <div class="platform-boxes">
+        <div class="platform-box" id="box-bwanabet">
+          <div class="row-top">
+            <span class="name"><span class="swatch bwanabet"></span>Bwanabet</span>
+          </div>
+          <div class="latest">
+            <span class="latest-label" id="bwanabet-time">Waiting for a round…</span>
+            <span class="latest-value" id="bwanabet-value">—</span>
+          </div>
+          <button class="view-btn" data-platform="bwanabet">View</button>
+        </div>
+
+        <div class="platform-box" id="box-bongobet">
+          <div class="row-top">
+            <span class="name"><span class="swatch bongobet"></span>Bongobet</span>
+          </div>
+          <div class="latest">
+            <span class="latest-label" id="bongobet-time">Waiting for a round…</span>
+            <span class="latest-value" id="bongobet-value">—</span>
+          </div>
+          <button class="view-btn" data-platform="bongobet">View</button>
+        </div>
       </div>
 
-      <button class="view-all" id="viewAllBtn">View all odds</button>
       <button class="signout" id="signoutBtn">Forget key on this device</button>
     </div>
 
     <div id="screen-detail">
       <header class="with-back">
         <button class="back-btn" id="backBtn" aria-label="Back">←</button>
-        <h1>All odds</h1>
+        <h1 id="detailTitle">Odds</h1>
       </header>
 
-      <div class="filters">
-        <button class="active" data-platform="all">All</button>
-        <button data-platform="bwanabet">Bwanabet</button>
-        <button data-platform="bongobet">Bongobet</button>
-      </div>
-
-      <div class="boxes" id="fullBoxes">
-        <div class="empty">No rounds yet for this platform.</div>
+      <div class="boxes" id="fullBoxes" style="margin-top:16px;">
+        <div class="empty">No rounds yet.</div>
       </div>
     </div>
 
@@ -261,34 +301,28 @@
 
   const screenList = document.getElementById('screen-list');
   const screenDetail = document.getElementById('screen-detail');
-  const recentBoxes = document.getElementById('recentBoxes');
   const fullBoxes = document.getElementById('fullBoxes');
-  const viewAllBtn = document.getElementById('viewAllBtn');
+  const detailTitle = document.getElementById('detailTitle');
   const backBtn = document.getElementById('backBtn');
 
   let API_KEY = localStorage.getItem(STORAGE_KEY) || '';
-  let activeFilter = 'all';
   let rounds = [];
   let es = null;
+  let detailPlatform = null;
 
-  viewAllBtn.addEventListener('click', () => {
-    screenList.style.display = 'none';
-    screenDetail.style.display = 'block';
-    renderFull();
+  document.querySelectorAll('.view-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      detailPlatform = btn.dataset.platform;
+      detailTitle.textContent = (detailPlatform === 'bwanabet' ? 'Bwanabet' : 'Bongobet') + ' odds';
+      screenList.style.display = 'none';
+      screenDetail.style.display = 'block';
+      renderFull();
+    });
   });
 
   backBtn.addEventListener('click', () => {
     screenDetail.style.display = 'none';
     screenList.style.display = 'block';
-  });
-
-  document.querySelectorAll('.filters button').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filters button').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = btn.dataset.platform;
-      renderFull();
-    });
   });
 
   signoutBtn.addEventListener('click', () => {
@@ -342,50 +376,51 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
-  function makeBox(r, isFresh) {
+  function updatePlatformSummary(platform) {
+    const latest = rounds.find((r) => r.platform === platform);
+    const valueEl = document.getElementById(platform + '-value');
+    const timeEl = document.getElementById(platform + '-time');
+    if (!latest) {
+      valueEl.textContent = '—';
+      timeEl.textContent = 'Waiting for a round…';
+      return;
+    }
+    valueEl.textContent = Number(latest.multiplier).toFixed(2) + 'x';
+    valueEl.className = 'latest-value ' + classify(latest.multiplier);
+    timeEl.textContent = formatTime(latest.collected_at);
+  }
+
+  function makeBox(r) {
     const box = document.createElement('div');
-    box.className = 'box' + (isFresh ? ' enter' : '');
+    box.className = 'box';
     box.innerHTML = `
-      <div class="meta">
-        <span class="platform"><span class="swatch ${r.platform}"></span>${r.platform}</span>
-        <span class="time">${formatTime(r.collected_at)}</span>
-      </div>
+      <span class="time">${formatTime(r.collected_at)}</span>
       <span class="multiplier ${classify(r.multiplier)}">${Number(r.multiplier).toFixed(2)}x</span>
     `;
     return box;
   }
 
-  function renderRecent(newestIsFresh) {
-    if (rounds.length === 0) {
-      recentBoxes.innerHTML = '<div class="empty">Waiting for the first round…</div>';
-      return;
-    }
-    recentBoxes.innerHTML = '';
-    rounds.slice(0, 5).forEach((r, i) => {
-      recentBoxes.appendChild(makeBox(r, newestIsFresh && i === 0));
-    });
-  }
-
   function renderFull() {
-    const visible = activeFilter === 'all' ? rounds : rounds.filter((r) => r.platform === activeFilter);
+    if (!detailPlatform) return;
+    const visible = rounds.filter((r) => r.platform === detailPlatform);
     if (visible.length === 0) {
-      fullBoxes.innerHTML = '<div class="empty">No rounds yet for this platform.</div>';
+      fullBoxes.innerHTML = '<div class="empty">No rounds yet.</div>';
       return;
     }
     fullBoxes.innerHTML = '';
-    visible.slice(0, 200).forEach((r) => {
-      fullBoxes.appendChild(makeBox(r, false));
-    });
+    visible.slice(0, 200).forEach((r) => fullBoxes.appendChild(makeBox(r)));
   }
 
   async function loadRecent() {
     try {
-      const res = await fetch(`/api/odds/recent?limit=100&key=${encodeURIComponent(API_KEY)}`);
+      const res = await fetch(`/api/odds/recent?limit=200&key=${encodeURIComponent(API_KEY)}`);
       if (!res.ok) throw new Error('load failed');
       rounds = await res.json();
-      renderRecent();
+      updatePlatformSummary('bwanabet');
+      updatePlatformSummary('bongobet');
     } catch (e) {
-      recentBoxes.innerHTML = '<div class="empty">Could not load history.</div>';
+      document.getElementById('bwanabet-time').textContent = 'Could not load.';
+      document.getElementById('bongobet-time').textContent = 'Could not load.';
     }
   }
 
@@ -406,8 +441,8 @@
       const round = JSON.parse(event.data);
       rounds.unshift(round);
       rounds = rounds.slice(0, 300);
-      renderRecent(true);
-      if (screenDetail.style.display === 'block') renderFull();
+      updatePlatformSummary(round.platform);
+      if (screenDetail.style.display === 'block' && detailPlatform === round.platform) renderFull();
     };
   }
 
