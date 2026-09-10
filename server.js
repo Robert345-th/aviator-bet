@@ -38,6 +38,10 @@ function requireApiKey(req, res, next) {
   next();
 }
 
+// ---------------------------------------------------------------------
+// Live feed: dashboard clients connect here via Server-Sent Events and
+// get pushed each round the moment it's inserted — no polling delay.
+// ---------------------------------------------------------------------
 const sseClients = new Set();
 
 function broadcast(round) {
@@ -60,8 +64,10 @@ app.get('/api/stream', requireApiKey, (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
+// Health check — Railway pings this
 app.get('/health', (req, res) => res.send('Aviator odds collector is running'));
 
+// Accepts either a single round or a batch: { rounds: [...] }
 app.post('/api/odds', requireApiKey, async (req, res) => {
   const rounds = Array.isArray(req.body.rounds)
     ? req.body.rounds
@@ -105,6 +111,8 @@ app.post('/api/odds', requireApiKey, async (req, res) => {
   }
 });
 
+// Lookback for the dashboard's initial load and for sanity-checking data
+// e.g. GET /api/odds/recent?platform=bwanabet&limit=50
 app.get('/api/odds/recent', requireApiKey, async (req, res) => {
   const platform = req.query.platform || null;
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 500);
@@ -130,6 +138,77 @@ app.get('/api/odds/recent', requireApiKey, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// ---------------------------------------------------------------------
+// Pattern mining: for each platform, look at runs of consecutive rounds
+// in the same color tier (blue < 2x, purple 2-9.99x, pink 10x+) and see
+// what tends to follow. Ranked by how reliable each pattern has been.
+// ---------------------------------------------------------------------
+function tierOf(m) {
+  if (m >= 10) return 'pink';
+  if (m >= 2) return 'purple';
+  return 'blue';
+}
+
+function computeTopPatterns(values) {
+  const streakLens = [2, 3, 4, 5];
+  const counts = {}; // "tier|len->nextTier" -> count
+  const totals = {}; // "tier|len" -> count
+
+  for (let i = 0; i < values.length - 1; i++) {
+    const t = tierOf(values[i]);
+    let streak = 1;
+    for (let j = i - 1; j >= 0 && tierOf(values[j]) === t; j--) streak++;
+
+    for (const len of streakLens) {
+      if (streak >= len) {
+        const key = t + '|' + len;
+        totals[key] = (totals[key] || 0) + 1;
+        const nextT = tierOf(values[i + 1]);
+        const pkey = key + '->' + nextT;
+        counts[pkey] = (counts[pkey] || 0) + 1;
+      }
+    }
+  }
+
+  const results = [];
+  for (const pkey in counts) {
+    const [key, nextT] = pkey.split('->');
+    const [tier, len] = key.split('|');
+    const total = totals[key];
+    const count = counts[pkey];
+    if (count < 5) continue; // require enough occurrences to trust it
+    results.push({
+      tier,
+      streak: Number(len),
+      next: nextT,
+      count,
+      total,
+      confidence: count / total,
+    });
+  }
+
+  results.sort((a, b) => b.confidence - a.confidence || b.count - a.count);
+  return results.slice(0, 5);
+}
+
+app.get('/api/patterns', requireApiKey, async (req, res) => {
+  const platform = req.query.platform;
+  if (!platform) return res.status(400).json({ error: 'platform required' });
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT multiplier FROM odds_log WHERE platform = $1
+       ORDER BY collected_at ASC LIMIT 1000`,
+      [platform]
+    );
+    const values = rows.map((r) => Number(r.multiplier));
+    res.json(computeTopPatterns(values));
+  } catch (err) {
+    console.error('Pattern query failed:', err);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
 
 ensureSchema()
   .then(() => {
