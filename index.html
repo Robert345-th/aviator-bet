@@ -329,10 +329,16 @@
       </header>
 
       <p class="sub" style="margin:16px 0 6px;">Bwanabet</p>
-      <div class="boxes" id="patternBoxes-bwanabet"></div>
+      <p class="sub" style="margin:0 0 6px;font-size:12px;">2.20x or higher</p>
+      <div class="boxes" id="patternBoxes-bwanabet-2"></div>
+      <p class="sub" style="margin:14px 0 6px;font-size:12px;">3x or higher</p>
+      <div class="boxes" id="patternBoxes-bwanabet-3"></div>
 
       <p class="sub" style="margin:24px 0 6px;">Bongobet</p>
-      <div class="boxes" id="patternBoxes-bongobet"></div>
+      <p class="sub" style="margin:0 0 6px;font-size:12px;">2.20x or higher</p>
+      <div class="boxes" id="patternBoxes-bongobet-2"></div>
+      <p class="sub" style="margin:14px 0 6px;font-size:12px;">3x or higher</p>
+      <div class="boxes" id="patternBoxes-bongobet-3"></div>
     </div>
 
   </div>
@@ -363,7 +369,7 @@
   let es = null;
   let detailPlatform = null;
 
-  function renderPatternList(targetId, patterns) {
+  function renderPatternList(targetId, patterns, label) {
     const box = document.getElementById(targetId);
     const fresh = document.createElement('div');
     if (patterns.length === 0) {
@@ -379,7 +385,7 @@
           <div style="display:flex;align-items:center;gap:4px;font-size:13.5px;">
             ${dots}
             <span style="color:var(--muted);margin:0 4px;">&rarr;</span>
-            <span style="font-weight:600;">3x+</span>
+            <span style="font-weight:600;">${label}</span>
           </div>
           <div style="font-size:12px;color:var(--muted);">${pct}% of the time (${p.count} of ${p.total})</div>
           <div style="font-size:12px;color:var(--odd-blue);">Safe: ${p.safe.toFixed(2)}x or higher, 90% of the time</div>
@@ -391,17 +397,25 @@
   }
 
   async function loadPatterns(platform) {
-    const box = document.getElementById(`patternBoxes-${platform}`);
-    const isFirstLoad = box.childElementCount === 0;
-    if (isFirstLoad) box.innerHTML = '<div class="empty">Finding patterns…</div>';
+    const box2 = document.getElementById(`patternBoxes-${platform}-2`);
+    const box3 = document.getElementById(`patternBoxes-${platform}-3`);
+    const isFirstLoad = box2.childElementCount === 0;
+    if (isFirstLoad) {
+      box2.innerHTML = '<div class="empty">Finding patterns…</div>';
+      box3.innerHTML = '<div class="empty">Finding patterns…</div>';
+    }
 
     try {
       const res = await fetch(`/api/patterns?platform=${platform}&key=${encodeURIComponent(API_KEY)}`);
       if (!res.ok) throw new Error('failed');
-      const patterns = await res.json();
-      renderPatternList(`patternBoxes-${platform}`, patterns);
+      const data = await res.json();
+      renderPatternList(`patternBoxes-${platform}-2`, data.target2, '2.20x+');
+      renderPatternList(`patternBoxes-${platform}-3`, data.target3, '3x+');
     } catch (e) {
-      if (isFirstLoad) box.innerHTML = '<div class="empty">Could not load patterns.</div>';
+      if (isFirstLoad) {
+        box2.innerHTML = '<div class="empty">Could not load patterns.</div>';
+        box3.innerHTML = '<div class="empty">Could not load patterns.</div>';
+      }
       // background refresh failures stay quiet — last good data stays on screen
     }
   }
