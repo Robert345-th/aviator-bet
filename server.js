@@ -150,45 +150,42 @@ function tierOf(m) {
   return 'blue';
 }
 
+function isHit(m) {
+  return m >= 4; // "4x and up" — the outcome we're hunting for
+}
+
+const MIN_OCCURRENCES = 5;
+const MIN_CONFIDENCE = 0.75;
+
 function computeTopPatterns(values) {
-  const streakLens = [2, 3, 4, 5];
-  const counts = {}; // "tier|len->nextTier" -> count
-  const totals = {}; // "tier|len" -> count
+  const seqLens = [2, 3, 4, 5];
+  const stats = {}; // sequence key -> { total, hits }
 
   for (let i = 0; i < values.length - 1; i++) {
-    const t = tierOf(values[i]);
-    let streak = 1;
-    for (let j = i - 1; j >= 0 && tierOf(values[j]) === t; j--) streak++;
+    for (const len of seqLens) {
+      const start = i - len + 1;
+      if (start < 0) continue;
 
-    for (const len of streakLens) {
-      if (streak >= len) {
-        const key = t + '|' + len;
-        totals[key] = (totals[key] || 0) + 1;
-        const nextT = tierOf(values[i + 1]);
-        const pkey = key + '->' + nextT;
-        counts[pkey] = (counts[pkey] || 0) + 1;
-      }
+      const seq = [];
+      for (let j = start; j <= i; j++) seq.push(tierOf(values[j]));
+      const key = seq.join('>');
+
+      if (!stats[key]) stats[key] = { total: 0, hits: 0 };
+      stats[key].total++;
+      if (isHit(values[i + 1])) stats[key].hits++;
     }
   }
 
   const results = [];
-  for (const pkey in counts) {
-    const [key, nextT] = pkey.split('->');
-    const [tier, len] = key.split('|');
-    const total = totals[key];
-    const count = counts[pkey];
-    if (count < 5) continue; // require enough occurrences to trust it
-    results.push({
-      tier,
-      streak: Number(len),
-      next: nextT,
-      count,
-      total,
-      confidence: count / total,
-    });
+  for (const key in stats) {
+    const { total, hits } = stats[key];
+    if (total < MIN_OCCURRENCES) continue;
+    const confidence = hits / total;
+    if (confidence < MIN_CONFIDENCE) continue;
+    results.push({ sequence: key.split('>'), count: hits, total, confidence });
   }
 
-  results.sort((a, b) => b.confidence - a.confidence || b.count - a.count);
+  results.sort((a, b) => b.confidence - a.confidence || b.total - a.total);
   return results.slice(0, 5);
 }
 
@@ -199,7 +196,7 @@ app.get('/api/patterns', requireApiKey, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT multiplier FROM odds_log WHERE platform = $1
-       ORDER BY collected_at ASC LIMIT 1000`,
+       ORDER BY collected_at ASC LIMIT 5000`,
       [platform]
     );
     const values = rows.map((r) => Number(r.multiplier));
