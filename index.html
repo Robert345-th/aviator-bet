@@ -85,18 +85,36 @@
 
   .gate-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
-  .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 18px 80px; }
 
-  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-  h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  header.with-back { justify-content: flex-start; }
+  header.plain { justify-content: space-between; }
+
+  .back-btn {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--ink);
+    cursor: pointer;
+    flex: none;
+  }
+
+  h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 
   .status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
   .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--low); }
   .status.connected .dot { background: var(--live-dot); }
 
-  .sub { color: var(--muted); font-size: 13px; margin: 0 0 28px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
 
-  .filters { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .filters { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
 
   .filters button {
     background: none;
@@ -112,36 +130,54 @@
 
   .filters button.active { color: var(--ink); border-bottom-color: var(--teal); font-weight: 500; }
 
-  .feed { display: flex; flex-direction: column; }
+  .boxes { display: flex; flex-direction: column; gap: 8px; }
 
-  .row {
-    display: grid;
-    grid-template-columns: 90px 1fr 90px;
+  .box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 11px 0;
-    border-bottom: 1px solid var(--line);
   }
 
-  .row .time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .row .platform { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-  .row .platform .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .box .meta { display: flex; flex-direction: column; gap: 2px; }
+  .box .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .box .platform { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
+  .box .platform .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .swatch.bwanabet { background: var(--teal); }
   .swatch.bongobet { background: #7C5CBF; }
 
-  .row .multiplier {
+  .box .multiplier {
     font-family: 'IBM Plex Mono', monospace;
     font-weight: 600;
-    font-size: 15px;
-    text-align: right;
+    font-size: 17px;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
   }
 
-  .row .multiplier.hot { color: var(--amber); }
-  .row .multiplier.low { color: var(--low); }
-  .row.enter { animation: flash 900ms ease-out; }
+  .box .multiplier.hot { color: var(--amber); }
+  .box .multiplier.low { color: var(--low); }
+  .box.enter { animation: flash 900ms ease-out; }
 
-  @keyframes flash { from { background: #FDF4E7; } to { background: transparent; } }
+  @keyframes flash { from { background: #FDF4E7; } to { background: var(--panel); } }
+
+  .view-all {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .view-all:active { background: var(--panel); }
 
   .empty { color: var(--muted); font-size: 14px; padding: 40px 0; text-align: center; }
 
@@ -156,7 +192,9 @@
     margin-top: 24px;
   }
 
-  @media (prefers-reduced-motion: reduce) { .row.enter { animation: none; } }
+  #screen-detail { display: none; }
+
+  @media (prefers-reduced-motion: reduce) { .box.enter { animation: none; } }
 </style>
 </head>
 <body>
@@ -172,26 +210,42 @@
   </div>
 
   <div class="wrap" id="dashboard" style="display:none;">
-    <header>
-      <h1>Aviator Odds</h1>
-      <div class="status" id="status">
-        <span class="dot"></span>
-        <span id="statusText">connecting</span>
+
+    <div id="screen-list">
+      <header class="plain">
+        <h1>Aviator Odds</h1>
+        <div class="status" id="status">
+          <span class="dot"></span>
+          <span id="statusText">connecting</span>
+        </div>
+      </header>
+      <p class="sub">Latest rounds from Bwanabet and Bongobet.</p>
+
+      <div class="boxes" id="recentBoxes">
+        <div class="empty">Waiting for the first round…</div>
       </div>
-    </header>
-    <p class="sub">Live rounds as they land from Bwanabet and Bongobet.</p>
 
-    <div class="filters">
-      <button class="active" data-platform="all">All</button>
-      <button data-platform="bwanabet">Bwanabet</button>
-      <button data-platform="bongobet">Bongobet</button>
+      <button class="view-all" id="viewAllBtn">View all odds</button>
+      <button class="signout" id="signoutBtn">Forget key on this device</button>
     </div>
 
-    <div class="feed" id="feed">
-      <div class="empty">Waiting for the first round…</div>
+    <div id="screen-detail">
+      <header class="with-back">
+        <button class="back-btn" id="backBtn" aria-label="Back">←</button>
+        <h1>All odds</h1>
+      </header>
+
+      <div class="filters">
+        <button class="active" data-platform="all">All</button>
+        <button data-platform="bwanabet">Bwanabet</button>
+        <button data-platform="bongobet">Bongobet</button>
+      </div>
+
+      <div class="boxes" id="fullBoxes">
+        <div class="empty">No rounds yet for this platform.</div>
+      </div>
     </div>
 
-    <button class="signout" id="signoutBtn">Forget key on this device</button>
   </div>
 
 <script>
@@ -201,22 +255,39 @@
   const keyInput = document.getElementById('keyInput');
   const unlockBtn = document.getElementById('unlockBtn');
   const gateError = document.getElementById('gateError');
-  const feedEl = document.getElementById('feed');
   const statusEl = document.getElementById('status');
   const statusText = document.getElementById('statusText');
   const signoutBtn = document.getElementById('signoutBtn');
+
+  const screenList = document.getElementById('screen-list');
+  const screenDetail = document.getElementById('screen-detail');
+  const recentBoxes = document.getElementById('recentBoxes');
+  const fullBoxes = document.getElementById('fullBoxes');
+  const viewAllBtn = document.getElementById('viewAllBtn');
+  const backBtn = document.getElementById('backBtn');
 
   let API_KEY = localStorage.getItem(STORAGE_KEY) || '';
   let activeFilter = 'all';
   let rounds = [];
   let es = null;
 
+  viewAllBtn.addEventListener('click', () => {
+    screenList.style.display = 'none';
+    screenDetail.style.display = 'block';
+    renderFull();
+  });
+
+  backBtn.addEventListener('click', () => {
+    screenDetail.style.display = 'none';
+    screenList.style.display = 'block';
+  });
+
   document.querySelectorAll('.filters button').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filters button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       activeFilter = btn.dataset.platform;
-      render();
+      renderFull();
     });
   });
 
@@ -271,24 +342,39 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
-  function render(newestIsFresh) {
-    const visible = activeFilter === 'all' ? rounds : rounds.filter((r) => r.platform === activeFilter);
+  function makeBox(r, isFresh) {
+    const box = document.createElement('div');
+    box.className = 'box' + (isFresh ? ' enter' : '');
+    box.innerHTML = `
+      <div class="meta">
+        <span class="platform"><span class="swatch ${r.platform}"></span>${r.platform}</span>
+        <span class="time">${formatTime(r.collected_at)}</span>
+      </div>
+      <span class="multiplier ${classify(r.multiplier)}">${Number(r.multiplier).toFixed(2)}x</span>
+    `;
+    return box;
+  }
 
-    if (visible.length === 0) {
-      feedEl.innerHTML = '<div class="empty">No rounds yet for this platform.</div>';
+  function renderRecent(newestIsFresh) {
+    if (rounds.length === 0) {
+      recentBoxes.innerHTML = '<div class="empty">Waiting for the first round…</div>';
       return;
     }
+    recentBoxes.innerHTML = '';
+    rounds.slice(0, 5).forEach((r, i) => {
+      recentBoxes.appendChild(makeBox(r, newestIsFresh && i === 0));
+    });
+  }
 
-    feedEl.innerHTML = '';
-    visible.slice(0, 200).forEach((r, i) => {
-      const row = document.createElement('div');
-      row.className = 'row' + (newestIsFresh && i === 0 ? ' enter' : '');
-      row.innerHTML = `
-        <span class="time">${formatTime(r.collected_at)}</span>
-        <span class="platform"><span class="swatch ${r.platform}"></span>${r.platform}</span>
-        <span class="multiplier ${classify(r.multiplier)}">${Number(r.multiplier).toFixed(2)}x</span>
-      `;
-      feedEl.appendChild(row);
+  function renderFull() {
+    const visible = activeFilter === 'all' ? rounds : rounds.filter((r) => r.platform === activeFilter);
+    if (visible.length === 0) {
+      fullBoxes.innerHTML = '<div class="empty">No rounds yet for this platform.</div>';
+      return;
+    }
+    fullBoxes.innerHTML = '';
+    visible.slice(0, 200).forEach((r) => {
+      fullBoxes.appendChild(makeBox(r, false));
     });
   }
 
@@ -297,9 +383,9 @@
       const res = await fetch(`/api/odds/recent?limit=100&key=${encodeURIComponent(API_KEY)}`);
       if (!res.ok) throw new Error('load failed');
       rounds = await res.json();
-      render();
+      renderRecent();
     } catch (e) {
-      feedEl.innerHTML = '<div class="empty">Could not load history.</div>';
+      recentBoxes.innerHTML = '<div class="empty">Could not load history.</div>';
     }
   }
 
@@ -320,7 +406,8 @@
       const round = JSON.parse(event.data);
       rounds.unshift(round);
       rounds = rounds.slice(0, 300);
-      render(true);
+      renderRecent(true);
+      if (screenDetail.style.display === 'block') renderFull();
     };
   }
 
