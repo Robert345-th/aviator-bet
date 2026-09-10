@@ -240,6 +240,7 @@
   }
 
   #screen-detail { display: none; }
+  #screen-patterns { display: none; }
 
   @media (prefers-reduced-motion: reduce) { .box.enter { animation: none; } }
 </style>
@@ -292,6 +293,16 @@
           </div>
           <button class="view-btn" data-platform="bongobet">View</button>
         </div>
+
+        <div class="platform-box" id="box-patterns">
+          <div class="row-top">
+            <span class="name">Top 5 patterns</span>
+          </div>
+          <div class="latest">
+            <span class="latest-label">Sequences that hit 4x+ at least 75% of the time</span>
+          </div>
+          <button class="view-btn" id="view-patterns-btn">View</button>
+        </div>
       </div>
 
       <button class="signout" id="signoutBtn">Forget key on this device</button>
@@ -303,12 +314,22 @@
         <h1 id="detailTitle">Odds</h1>
       </header>
 
-      <p class="sub" style="margin:16px 0 6px;">Top 5 patterns</p>
-      <div class="boxes" id="patternBoxes"></div>
-
       <div class="boxes" id="fullBoxes" style="margin-top:16px;">
         <div class="empty">No rounds yet.</div>
       </div>
+    </div>
+
+    <div id="screen-patterns">
+      <header class="with-back">
+        <button class="back-btn" id="backBtn2" aria-label="Back">←</button>
+        <h1>Top 5 patterns</h1>
+      </header>
+
+      <p class="sub" style="margin:16px 0 6px;">Bwanabet</p>
+      <div class="boxes" id="patternBoxes-bwanabet"></div>
+
+      <p class="sub" style="margin:20px 0 6px;">Bongobet</p>
+      <div class="boxes" id="patternBoxes-bongobet"></div>
     </div>
 
   </div>
@@ -327,17 +348,20 @@
 
   const screenList = document.getElementById('screen-list');
   const screenDetail = document.getElementById('screen-detail');
+  const screenPatterns = document.getElementById('screen-patterns');
   const fullBoxes = document.getElementById('fullBoxes');
   const detailTitle = document.getElementById('detailTitle');
   const backBtn = document.getElementById('backBtn');
+  const backBtn2 = document.getElementById('backBtn2');
+  const viewPatternsBtn = document.getElementById('view-patterns-btn');
 
   let API_KEY = localStorage.getItem(STORAGE_KEY) || '';
   let rounds = [];
   let es = null;
   let detailPlatform = null;
 
-  async function loadPatterns(platform) {
-    const box = document.getElementById('patternBoxes');
+  async function loadPatterns(platform, targetId) {
+    const box = document.getElementById(targetId);
     box.innerHTML = '<div class="empty">Finding patterns…</div>';
     try {
       const res = await fetch(`/api/patterns?platform=${platform}&key=${encodeURIComponent(API_KEY)}`);
@@ -350,14 +374,15 @@
       box.innerHTML = '';
       patterns.forEach((p) => {
         const pct = Math.round(p.confidence * 100);
+        const dots = p.sequence.map((t) => `<span class="tier-dot ${t}"></span>`).join('');
         const el = document.createElement('div');
         el.className = 'box';
         el.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px;';
         el.innerHTML = `
-          <div style="display:flex;align-items:center;gap:6px;font-size:13.5px;">
-            <span class="tier-dot ${p.tier}"></span>${p.streak}× ${p.tier} in a row
-            <span style="color:var(--muted);">&rarr;</span>
-            <span class="tier-dot ${p.next}"></span>${p.next}
+          <div style="display:flex;align-items:center;gap:4px;font-size:13.5px;">
+            ${dots}
+            <span style="color:var(--muted);margin:0 4px;">&rarr;</span>
+            <span style="font-weight:600;">4x+</span>
           </div>
           <div style="font-size:12px;color:var(--muted);">${pct}% of the time (${p.count} of ${p.total})</div>
         `;
@@ -368,21 +393,29 @@
     }
   }
 
+  function showScreen(name) {
+    screenList.style.display = name === 'list' ? 'block' : 'none';
+    screenDetail.style.display = name === 'detail' ? 'block' : 'none';
+    screenPatterns.style.display = name === 'patterns' ? 'block' : 'none';
+  }
+
   document.querySelectorAll('.view-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       detailPlatform = btn.dataset.platform;
       detailTitle.textContent = (detailPlatform === 'bwanabet' ? 'Bwanabet' : 'Bongobet') + ' odds';
-      screenList.style.display = 'none';
-      screenDetail.style.display = 'block';
+      showScreen('detail');
       renderFull();
-      loadPatterns(detailPlatform);
     });
   });
 
-  backBtn.addEventListener('click', () => {
-    screenDetail.style.display = 'none';
-    screenList.style.display = 'block';
+  viewPatternsBtn.addEventListener('click', () => {
+    showScreen('patterns');
+    loadPatterns('bwanabet', 'patternBoxes-bwanabet');
+    loadPatterns('bongobet', 'patternBoxes-bongobet');
   });
+
+  backBtn.addEventListener('click', () => showScreen('list'));
+  backBtn2.addEventListener('click', () => showScreen('list'));
 
   signoutBtn.addEventListener('click', () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -508,7 +541,12 @@
       rounds.unshift(round);
       rounds = rounds.slice(0, 300);
       updatePlatformSummary(round.platform);
-      if (screenDetail.style.display === 'block' && detailPlatform === round.platform) renderFull();
+      if (screenDetail.style.display === 'block' && detailPlatform === round.platform) {
+        renderFull();
+      }
+      if (screenPatterns.style.display === 'block') {
+        loadPatterns(round.platform, 'patternBoxes-' + round.platform);
+      }
     };
   }
 
