@@ -137,6 +137,19 @@ app.get('/api/odds/recent', requireApiKey, async (req, res) => {
   }
 });
 
+app.get('/api/odds/count', requireApiKey, async (req, res) => {
+  const platform = req.query.platform || null;
+  try {
+    const { rows } = platform
+      ? await pool.query(`SELECT COUNT(*) FROM odds_log WHERE platform = $1`, [platform])
+      : await pool.query(`SELECT COUNT(*) FROM odds_log`);
+    res.json({ count: parseInt(rows[0].count, 10) });
+  } catch (err) {
+    console.error('Count query failed:', err);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // ---------------------------------------------------------------------
