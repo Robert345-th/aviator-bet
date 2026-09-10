@@ -386,6 +386,7 @@
     dashEl.style.display = 'block';
     loadRecent();
     connectStream();
+    setInterval(loadRecent, 1000);
   }
 
   function classify(multiplier) {
@@ -441,6 +442,7 @@
       rounds = await res.json();
       updatePlatformSummary('bwanabet');
       updatePlatformSummary('bongobet');
+      if (screenDetail.style.display === 'block') renderFull();
     } catch (e) {
       document.getElementById('bwanabet-time').textContent = 'Could not load.';
       document.getElementById('bongobet-time').textContent = 'Could not load.';
