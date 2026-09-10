@@ -160,10 +160,6 @@ function tierOf(m) {
   return 'blue';
 }
 
-function isHigh(m) {
-  return m >= 3; // "3x and up"
-}
-
 const MIN_OCCURRENCES = 5;
 const MIN_CONFIDENCE = 0.68;
 const SAFE_CONFIDENCE = 0.90; // the floor this sequence reaches 90%+ of the time
@@ -175,7 +171,7 @@ function percentileFloor(sortedAsc, p) {
   return sortedAsc[idx];
 }
 
-function computeTopPatterns(values) {
+function computeTopPatternsForTarget(values, target) {
   const seqLens = [2, 3, 4, 5];
   const stats = {}; // sequence key -> array of next-round outcomes
 
@@ -198,7 +194,7 @@ function computeTopPatterns(values) {
     const total = outcomes.length;
     if (total < MIN_OCCURRENCES) continue;
 
-    const hits = outcomes.filter(isHigh).length;
+    const hits = outcomes.filter((v) => v >= target).length;
     const confidence = hits / total;
     if (confidence < MIN_CONFIDENCE) continue;
 
@@ -214,6 +210,13 @@ function computeTopPatterns(values) {
 
   results.sort((a, b) => b.confidence - a.confidence || b.total - a.total);
   return results.slice(0, 5);
+}
+
+function computeTopPatterns(values) {
+  return {
+    target2: computeTopPatternsForTarget(values, 2.2),
+    target3: computeTopPatternsForTarget(values, 3),
+  };
 }
 
 app.get('/api/patterns', requireApiKey, async (req, res) => {
