@@ -511,7 +511,7 @@
       return;
     }
     fullBoxes.innerHTML = '';
-    visible.slice(0, 200).forEach((r) => fullBoxes.appendChild(makeBox(r)));
+    visible.forEach((r) => fullBoxes.appendChild(makeBox(r)));
   }
 
   async function loadCounts() {
@@ -536,7 +536,7 @@
 
   async function loadRecent() {
     try {
-      const res = await fetch(`/api/odds/recent?limit=200&key=${encodeURIComponent(API_KEY)}`);
+      const res = await fetch(`/api/odds/recent?limit=5000&key=${encodeURIComponent(API_KEY)}`);
       if (!res.ok) throw new Error('load failed');
       rounds = await res.json();
       updatePlatformSummary('bwanabet');
@@ -564,7 +564,7 @@
     es.onmessage = (event) => {
       const round = JSON.parse(event.data);
       rounds.unshift(round);
-      rounds = rounds.slice(0, 300);
+      rounds = rounds.slice(0, 5000);
       updatePlatformSummary(round.platform);
       if (screenDetail.style.display === 'block' && detailPlatform === round.platform) {
         renderFull();
