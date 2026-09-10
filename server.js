@@ -161,7 +161,7 @@ function tierOf(m) {
 }
 
 function isHit(m) {
-  return m >= 4; // "4x and up" — the outcome we're hunting for
+  return m >= 3; // "3x and up" — the outcome we're hunting for
 }
 
 const MIN_OCCURRENCES = 5;
