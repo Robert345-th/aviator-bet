@@ -161,7 +161,6 @@ function tierOf(m) {
 }
 
 const MIN_OCCURRENCES = 5;
-const MIN_CONFIDENCE = 0.68;
 const SAFE_CONFIDENCE = 0.90; // the floor this sequence reaches 90%+ of the time
 
 function percentileFloor(sortedAsc, p) {
@@ -171,7 +170,7 @@ function percentileFloor(sortedAsc, p) {
   return sortedAsc[idx];
 }
 
-function computeTopPatternsForTarget(values, target) {
+function computeTopPatternsForTarget(values, target, minConfidence) {
   const seqLens = [2, 3, 4, 5];
   const stats = {}; // sequence key -> array of next-round outcomes
 
@@ -196,7 +195,7 @@ function computeTopPatternsForTarget(values, target) {
 
     const hits = outcomes.filter((v) => v >= target).length;
     const confidence = hits / total;
-    if (confidence < MIN_CONFIDENCE) continue;
+    if (confidence < minConfidence) continue;
 
     const sorted = [...outcomes].sort((a, b) => a - b);
     // 10th percentile = the floor that's met or beaten 90% of the time.
@@ -214,8 +213,8 @@ function computeTopPatternsForTarget(values, target) {
 
 function computeTopPatterns(values) {
   return {
-    target2: computeTopPatternsForTarget(values, 2.2),
-    target3: computeTopPatternsForTarget(values, 3),
+    target2: computeTopPatternsForTarget(values, 2.2, 0.75),
+    target3: computeTopPatternsForTarget(values, 3, 0.68),
   };
 }
 
