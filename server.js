@@ -370,8 +370,14 @@ app.get('/api/next-action', requireApiKey, async (req, res) => {
     );
     const values = rows.map((r) => Number(r.multiplier));
 
+    // Included on every response (bet or wait) so the client can show
+    // exactly what history the decision was based on — for checking it
+    // against the actual page.
+    const last10 = values.slice(-10);
+    const last10Tiers = last10.map(tierOf);
+
     if (values.length < MIN_HISTORY_FOR_DECISION) {
-      return res.json({ action: 'wait', reason: 'not enough history yet' });
+      return res.json({ action: 'wait', reason: 'not enough history yet', last10, last10Tiers });
     }
 
     const patterns = computeTopPatterns(values);
@@ -392,6 +398,11 @@ app.get('/api/next-action', requireApiKey, async (req, res) => {
           confidence: hit3.confidence,
           matched: 'target3',
           sequence: hit3.sequence,
+          matchedLen: len,
+          sampleHits: hit3.count,
+          sampleTotal: hit3.total,
+          last10,
+          last10Tiers,
         });
       }
 
@@ -403,11 +414,16 @@ app.get('/api/next-action', requireApiKey, async (req, res) => {
           confidence: hit2.confidence,
           matched: 'target2',
           sequence: hit2.sequence,
+          matchedLen: len,
+          sampleHits: hit2.count,
+          sampleTotal: hit2.total,
+          last10,
+          last10Tiers,
         });
       }
     }
 
-    res.json({ action: 'wait' });
+    res.json({ action: 'wait', last10, last10Tiers });
   } catch (err) {
     console.error('Next-action query failed:', err);
     res.status(500).json({ error: 'query failed' });
